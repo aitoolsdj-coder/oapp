@@ -138,8 +138,21 @@ document.addEventListener('DOMContentLoaded', () => {
             ]);
 
             // 2. Sync Logic (merge with local)
-            Storage.syncRequirements(reqs);
-            Storage.syncQuestions(qs);
+            const normReqs = reqs.map(r => ({
+                ...r,
+                autor: r.autor ?? r["autor (opcjonalnie)"] ?? "",
+                uwagi: r.uwagi ?? r["uwagi (opcjonalnie)"] ?? "",
+                status: (r.status && String(r.status).trim()) ? String(r.status).trim() : "Nowe",
+            }));
+
+            const normQs = qs.map(r => ({
+                ...r,
+                autor: r.autor ?? r["autor (opcjonalnie)"] ?? "",
+                status: (r.status && String(r.status).trim()) ? String(r.status).trim() : "Nowe",
+            }));
+
+            Storage.syncRequirements(normReqs);
+            Storage.syncQuestions(normQs);
 
             // 3. Re-render
             renderRequirements();
