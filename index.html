@@ -17,147 +17,272 @@
 
 <body>
 
-    <!-- Header -->
-    <header class="app-header">
-        <h1>OAPP – Olefiny</h1>
-    </header>
+    <body>
 
-    <!-- Navigation Tabs -->
-    <nav class="tab-nav">
-        <button class="tab-btn active" data-tab="zapotrzebowania">Zapotrzebowania</button>
-        <button class="tab-btn" data-tab="pytania">Pytania</button>
-        <button class="tab-btn" data-tab="ustawienia">Ustawienia</button>
-        <div class="tab-indicator"></div>
-    </nav>
+        <!-- Header -->
+        <header class="app-header">
+            <div class="header-content">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                    stroke-linecap="round" stroke-linejoin="round" class="header-icon">
+                    <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
+                    <line x1="9" y1="3" x2="9" y2="21"></line>
+                </svg>
+                <h1>OAPP</h1>
+            </div>
+            <div class="header-actions">
+                <button class="icon-btn"><svg width="24" height="24" viewBox="0 0 24 24" fill="none"
+                        stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path>
+                        <path d="M13.73 21a2 2 0 0 1-3.46 0"></path>
+                    </svg></button>
+                <button class="icon-btn"><svg width="24" height="24" viewBox="0 0 24 24" fill="none"
+                        stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <line x1="3" y1="12" x2="21" y2="12"></line>
+                        <line x1="3" y1="6" x2="21" y2="6"></line>
+                        <line x1="3" y1="18" x2="21" y2="18"></line>
+                    </svg></button>
+            </div>
+        </header>
 
-    <!-- Main Content -->
-    <main id="main-content">
-        <!-- Zapotrzebowania View -->
-        <section id="zapotrzebowania" class="tab-content active">
-            <div class="view-header">
-                <h2>Zapotrzebowania</h2>
-                <button class="add-btn" id="add-req-btn">+ Dodaj</button>
-            </div>
-            <div class="kanban-board" id="req-board">
-                <div class="kanban-column" data-status="Nowe">
-                    <h3>Nowe</h3>
-                    <div class="kanban-list" id="req-list-nowe"></div>
+        <!-- Main Content -->
+        <main id="main-content">
+            <!-- Zapotrzebowania View -->
+            <section id="zapotrzebowania" class="tab-content active">
+                <div class="view-header">
+                    <h2>Zapotrzebowania</h2>
+                    <button class="add-btn" id="add-req-btn">+ Dodaj</button>
                 </div>
-                <div class="kanban-column" data-status="W toku">
-                    <h3>W toku</h3>
-                    <div class="kanban-list" id="req-list-w-toku"></div>
+                <!-- Lists container instead of side-by-side columns to match vertical mobile scroll -->
+                <div class="kanban-board-vertical" id="req-board">
+                    <!-- Status Sections will be headers in the list for mobile view, or just sorted list -->
+                    <!-- Based on image, it looks like a list of cards. Let's keep the columns but style them as full width stacks for mobile -->
+                    <div class="kanban-column" data-status="Nowe">
+                        <!-- <h3>Nowe</h3> -->
+                        <div class="kanban-list" id="req-list-nowe"></div>
+                    </div>
+                    <!-- ... other columns (hidden if empty or handled via filter usually, but we stick to board) -->
+                    <div class="kanban-column" data-status="W toku">
+                        <!-- <h3>W toku</h3> -->
+                        <div class="kanban-list" id="req-list-w-toku"></div>
+                    </div>
+                    <div class="kanban-column" data-status="Zrealizowane">
+                        <!-- <h3>Zrealizowane</h3> -->
+                        <div class="kanban-list" id="req-list-zrealizowane"></div>
+                    </div>
                 </div>
-                <div class="kanban-column" data-status="Zrealizowane">
-                    <h3>Zrealizowane</h3>
-                    <div class="kanban-list" id="req-list-zrealizowane"></div>
-                </div>
-            </div>
-        </section>
+            </section>
 
-        <!-- Pytania View -->
-        <section id="pytania" class="tab-content">
-            <div class="view-header">
-                <h2>Pytania</h2>
-                <button class="add-btn" id="add-q-btn">+ Dodaj</button>
-            </div>
-            <div class="kanban-board" id="q-board">
-                <div class="kanban-column" data-status="Nowe">
-                    <h3>Nowe</h3>
-                    <div class="kanban-list" id="q-list-nowe"></div>
+            <!-- Pytania View -->
+            <section id="pytania" class="tab-content">
+                <div class="view-header">
+                    <h2>Pytania</h2>
+                    <button class="add-btn" id="add-q-btn">+ Dodaj</button>
                 </div>
-                <div class="kanban-column" data-status="W toku">
-                    <h3>W toku</h3>
-                    <div class="kanban-list" id="q-list-w-toku"></div>
+                <div class="kanban-board-vertical" id="q-board">
+                    <div class="kanban-column" data-status="Nowe">
+                        <div class="kanban-list" id="q-list-nowe"></div>
+                    </div>
+                    <div class="kanban-column" data-status="W toku">
+                        <div class="kanban-list" id="q-list-w-toku"></div>
+                    </div>
+                    <div class="kanban-column" data-status="Zrealizowane">
+                        <div class="kanban-list" id="q-list-zrealizowane"></div>
+                    </div>
                 </div>
-                <div class="kanban-column" data-status="Zrealizowane">
-                    <h3>Zrealizowane</h3>
-                    <div class="kanban-list" id="q-list-zrealizowane"></div>
-                </div>
-            </div>
-        </section>
+            </section>
 
-        <!-- Ustawienia View -->
-        <section id="ustawienia" class="tab-content">
-            <div class="settings-container">
-                <h2>Ustawienia</h2>
-                <div class="form-group">
-                    <label for="settings-author">Twoje imię (Autor)</label>
-                    <input type="text" id="settings-author" placeholder="Wpisz imię">
+            <!-- Ustawienia View -->
+            <section id="ustawienia" class="tab-content">
+                <div class="view-header">
+                    <h2>Ustawienia</h2>
                 </div>
-                <button id="clear-data-btn" class="danger-btn">Wyczyść dane lokalne</button>
-                <p class="version-info">Wersja 1.0.0</p>
-            </div>
-        </section>
-    </main>
 
-    <!-- Modals -->
-    <div id="modal-req" class="modal">
-        <div class="modal-content">
-            <span class="close-modal">&times;</span>
-            <h2>Nowe Zapotrzebowanie</h2>
-            <form id="form-req">
-                <div class="form-group">
-                    <label for="req-what">Co potrzebujesz? *</label>
-                    <input type="text" id="req-what" required>
+                <div class="settings-profile-card">
+                    <div class="profile-avatar">
+                        <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+                            <circle cx="12" cy="7" r="4"></circle>
+                        </svg>
+                    </div>
+                    <div class="profile-info">
+                        <h3 id="profile-name-display">Kuba</h3>
+                        <p>kuba@cgas.pl</p>
+                    </div>
                 </div>
-                <div class="form-group">
-                    <label for="req-amount">Ilość *</label>
-                    <input type="text" id="req-amount" required>
+
+                <div class="settings-list">
+                    <div class="settings-group-title">KONTO</div>
+                    <div class="settings-item">
+                        <div class="settings-item-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none"
+                                stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+                                <circle cx="12" cy="7" r="4"></circle>
+                            </svg></div>
+                        <div class="settings-item-label">Profil użytkownika</div>
+                        <div class="settings-item-arrow">›</div>
+                    </div>
+                    <div class="settings-item">
+                        <div class="settings-item-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none"
+                                stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path>
+                                <path d="M13.73 21a2 2 0 0 1-3.46 0"></path>
+                            </svg></div>
+                        <div class="settings-item-label">Powiadomienia</div>
+                        <div class="settings-item-arrow">›</div>
+                    </div>
+
+                    <div class="settings-group-title">BEZPIECZEŃSTWO</div>
+                    <div class="settings-item">
+                        <div class="settings-item-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none"
+                                stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
+                            </svg></div>
+                        <div class="settings-item-label">Zmień hasło</div>
+                        <div class="settings-item-arrow">›</div>
+                    </div>
+
+                    <div class="settings-group-title">O APLIKACJI</div>
+                    <div class="settings-item">
+                        <div class="settings-item-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none"
+                                stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <circle cx="12" cy="12" r="10"></circle>
+                                <line x1="12" y1="16" x2="12" y2="12"></line>
+                                <line x1="12" y1="8" x2="12.01" y2="8"></line>
+                            </svg></div>
+                        <div class="settings-item-label">Informacje</div>
+                        <div class="settings-item-arrow">›</div>
+                    </div>
                 </div>
-                <div class="form-group">
-                    <label for="req-producer">Producent</label>
-                    <input type="text" id="req-producer">
+
+                <div class="settings-logout-container">
+                    <button id="clear-data-btn" class="logout-btn">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
+                            <polyline points="16 17 21 12 16 7"></polyline>
+                            <line x1="21" y1="12" x2="9" y2="12"></line>
+                        </svg>
+                        Wyloguj się (Wyczyść)
+                    </button>
                 </div>
-                <div class="form-group">
-                    <label for="req-notes">Uwagi</label>
-                    <textarea id="req-notes"></textarea>
+
+                <!-- Hidden inputs for actual logic -->
+                <div style="display:none">
+                    <input type="text" id="settings-author">
                 </div>
-                <button type="submit" class="submit-btn">Zapisz</button>
-            </form>
+
+            </section>
+        </main>
+
+        <!-- Bottom Navigation -->
+        <nav class="tab-nav">
+            <button class="tab-btn active" data-tab="zapotrzebowania">
+                <div class="tab-icon">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                        stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                        <polyline points="14 2 14 8 20 8"></polyline>
+                        <line x1="16" y1="13" x2="8" y2="13"></line>
+                        <line x1="16" y1="17" x2="8" y2="17"></line>
+                        <polyline points="10 9 9 9 8 9"></polyline>
+                    </svg>
+                </div>
+                <span>Zapotrzebowania</span>
+            </button>
+            <button class="tab-btn" data-tab="pytania">
+                <div class="tab-icon">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                        stroke-linecap="round" stroke-linejoin="round">
+                        <path
+                            d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z">
+                        </path>
+                    </svg>
+                </div>
+                <span>Pytania</span>
+            </button>
+            <button class="tab-btn" data-tab="ustawienia">
+                <div class="tab-icon">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                        stroke-linecap="round" stroke-linejoin="round">
+                        <circle cx="12" cy="12" r="3"></circle>
+                        <path
+                            d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z">
+                        </path>
+                    </svg>
+                </div>
+                <span>Ustawienia</span>
+            </button>
+        </nav>
+
+        <!-- Modals -->
+        <div id="modal-req" class="modal">
+            <div class="modal-content">
+                <span class="close-modal">&times;</span>
+                <h2>Nowe Zapotrzebowanie</h2>
+                <form id="form-req">
+                    <div class="form-group">
+                        <label for="req-what">Co potrzebujesz? *</label>
+                        <input type="text" id="req-what" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="req-amount">Ilość *</label>
+                        <input type="text" id="req-amount" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="req-producer">Producent</label>
+                        <input type="text" id="req-producer">
+                    </div>
+                    <div class="form-group">
+                        <label for="req-notes">Uwagi</label>
+                        <textarea id="req-notes"></textarea>
+                    </div>
+                    <button type="submit" class="submit-btn">Zapisz</button>
+                </form>
+            </div>
         </div>
-    </div>
 
-    <div id="modal-q" class="modal">
-        <div class="modal-content">
-            <span class="close-modal">&times;</span>
-            <h2>Nowe Pytanie</h2>
-            <form id="form-q">
-                <div class="form-group">
-                    <label for="q-desc">Opis pytania *</label>
-                    <textarea id="q-desc" required></textarea>
-                </div>
-                <div class="form-group">
-                    <label for="q-date">Termin odpowiedzi</label>
-                    <input type="date" id="q-date">
-                </div>
-                <div class="form-group">
-                    <label for="q-priority">Priorytet *</label>
-                    <select id="q-priority">
-                        <option value="Niski">Niski</option>
-                        <option value="Sredni" selected>Średni</option>
-                        <option value="Wysoki">Wysoki</option>
-                    </select>
-                </div>
-                <button type="submit" class="submit-btn">Zapisz</button>
-            </form>
+        <div id="modal-q" class="modal">
+            <div class="modal-content">
+                <span class="close-modal">&times;</span>
+                <h2>Nowe Pytanie</h2>
+                <form id="form-q">
+                    <div class="form-group">
+                        <label for="q-desc">Opis pytania *</label>
+                        <textarea id="q-desc" required></textarea>
+                    </div>
+                    <div class="form-group">
+                        <label for="q-date">Termin odpowiedzi</label>
+                        <input type="date" id="q-date">
+                    </div>
+                    <div class="form-group">
+                        <label for="q-priority">Priorytet *</label>
+                        <select id="q-priority">
+                            <option value="Niski">Niski</option>
+                            <option value="Sredni" selected>Średni</option>
+                            <option value="Wysoki">Wysoki</option>
+                        </select>
+                    </div>
+                    <button type="submit" class="submit-btn">Zapisz</button>
+                </form>
+            </div>
         </div>
-    </div>
 
-    <!-- Toast Notification -->
-    <div id="toast-container"></div>
+        <!-- Toast Notification -->
+        <div id="toast-container"></div>
 
-    <script src="storage.js"></script>
-    <script src="api.js"></script>
-    <script src="app.js"></script>
-    <script>
-        if ('serviceWorker' in navigator) {
-            window.addEventListener('load', () => {
-                navigator.serviceWorker.register('./sw.js')
-                    .then(reg => console.log('SW register success', reg))
-                    .catch(err => console.log('SW register fail', err));
-            });
-        }
-    </script>
-</body>
+        <script src="storage.js"></script>
+        <script src="api.js"></script>
+        <script src="app.js"></script>
+        <script>
+            if ('serviceWorker' in navigator) {
+                window.addEventListener('load', () => {
+                    navigator.serviceWorker.register('./sw.js')
+                        .then(reg => console.log('SW register success', reg))
+                        .catch(err => console.log('SW register fail', err));
+                });
+            }
+        </script>
+    </body>
 
 </html>
