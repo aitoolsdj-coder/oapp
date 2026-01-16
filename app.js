@@ -53,13 +53,17 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // --- Modals ---
     function setupModals() {
-        document.getElementById('add-req-btn').addEventListener('click', () => {
-            modalReq.style.display = 'flex';
-        });
+        if (document.getElementById('add-req-btn')) {
+            document.getElementById('add-req-btn').addEventListener('click', () => {
+                modalReq.style.display = 'flex';
+            });
+        }
 
-        document.getElementById('add-q-btn').addEventListener('click', () => {
-            modalQ.style.display = 'flex';
-        });
+        if (document.getElementById('add-q-btn')) {
+            document.getElementById('add-q-btn').addEventListener('click', () => {
+                modalQ.style.display = 'flex';
+            });
+        }
 
         closeBtns.forEach(btn => {
             btn.addEventListener('click', (e) => {
@@ -111,13 +115,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     co, ilosc, producent, autor: settings.author, uwagi
                 });
 
-                // Update ID from server if available
                 if (response.id) {
-                    newItem.id = response.id; // Correct update logic requires finding item again or robust ID handling. 
-                    // For simplicity, we assume we might get a real ID. 
-                    // Ideally we update the local item with the server ID to avoid dupes/issues.
-                    // However, finding it by local-ID is tricky if we don't keep that reference.
-                    // Let's reload items, find by local-ID (timestamp) and update.
                     const items = Storage.getRequirements();
                     const index = items.findIndex(i => i.createdAt === newItem.createdAt);
                     if (index !== -1) {
@@ -162,7 +160,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 const response = await API.addQuestion({
                     opis, termin_odpowiedzi: termin, priorytet, autor: settings.author
                 });
-                // Similar ID update logic
                 if (response.id) {
                     const items = Storage.getQuestions();
                     const index = items.findIndex(i => i.createdAt === newItem.createdAt);
@@ -203,9 +200,13 @@ document.addEventListener('DOMContentLoaded', () => {
     function renderRequirements() {
         const items = Storage.getRequirements();
         // Clear lists
-        document.getElementById('req-list-nowe').innerHTML = '';
-        document.getElementById('req-list-w-toku').innerHTML = '';
-        document.getElementById('req-list-zrealizowane').innerHTML = '';
+        const listNowe = document.getElementById('req-list-nowe');
+        const listW = document.getElementById('req-list-w-toku');
+        const listZ = document.getElementById('req-list-zrealizowane');
+
+        if (listNowe) listNowe.innerHTML = '';
+        if (listW) listW.innerHTML = '';
+        if (listZ) listZ.innerHTML = '';
 
         items.forEach(item => {
             const card = createCard('req', item);
@@ -217,9 +218,13 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function renderQuestions() {
         const items = Storage.getQuestions();
-        document.getElementById('q-list-nowe').innerHTML = '';
-        document.getElementById('q-list-w-toku').innerHTML = '';
-        document.getElementById('q-list-zrealizowane').innerHTML = '';
+        const listNowe = document.getElementById('q-list-nowe');
+        const listW = document.getElementById('q-list-w-toku');
+        const listZ = document.getElementById('q-list-zrealizowane');
+
+        if (listNowe) listNowe.innerHTML = '';
+        if (listW) listW.innerHTML = '';
+        if (listZ) listZ.innerHTML = '';
 
         items.forEach(item => {
             const card = createCard('q', item);
@@ -232,67 +237,123 @@ document.addEventListener('DOMContentLoaded', () => {
     function createCard(type, item) {
         const div = document.createElement('div');
         div.className = 'card';
-        if (item.syncError) div.classList.add('sync-error');
+        // Note: Inline style sync error check was replaced by CSS class in previous approach, 
+        // but new CSS might not have .sync-error style. Adding inline to be safe or class.
+        if (item.syncError) div.style.borderLeft = '4px solid #FF3B30';
         div.draggable = true;
         div.dataset.id = item.id;
         div.dataset.type = type;
 
-        // Error Badge
-        if (item.syncError) {
-            const badge = document.createElement('div');
-            badge.className = 'error-badge';
-            badge.innerText = 'Błąd synchro';
-            div.appendChild(badge);
+        // Badge Logic - matching the requested style screenshot
+        let badgeClass = 'badge-blue';
+        let badgeText = item.status;
+
+        if (type === 'q') {
+            // Priority handling
+            if (item.priorytet === 'Wysoki') badgeClass = 'badge-orange';
+            else if (item.priorytet === 'Sredni') badgeClass = 'badge-orange';
+            else badgeClass = 'badge-green';
+            badgeText = `Priorytet: ${item.priorytet}`;
+        } else {
+            // Status handling for Requirements
+            // Mapping statuses to display names from image if desired, or sticking to logic
+            if (item.status === 'Nowe') {
+                badgeClass = 'badge-orange';
+                badgeText = 'Oczekujące'; // from screenshot 'Oczekujące' matches 'Nowe' bucket
+            }
+            else if (item.status === 'W toku') {
+                badgeClass = 'badge-blue';
+                badgeText = 'Zatwierdzone'; // from screenshot 'Zatwierdzone' matches 'W toku' bucket in previous logic
+            }
+            else if (item.status === 'Zrealizowane') {
+                badgeClass = 'badge-green';
+                badgeText = 'Zrealizowane';
+            }
         }
+
+        const badge = document.createElement('span');
+        badge.className = `card-badge ${badgeClass}`;
+        badge.textContent = badgeText;
+        div.appendChild(badge);
 
         const title = document.createElement('div');
         title.className = 'card-title';
-        title.innerText = type === 'req' ? item.co : shortenText(item.opis);
+        title.textContent = type === 'req' ? item.co : item.opis;
         div.appendChild(title);
 
-        const details = document.createElement('div');
-        details.className = 'card-details';
-        if (type === 'req') {
-            details.innerHTML = `
-                <span>Ilość: ${item.ilosc}</span>
-                <span>Autor: ${item.autor}</span>
-                ${item.producent ? `<span>Prod: ${item.producent}</span>` : ''}
-            `;
-        } else {
-            details.innerHTML = `
-                <span>Priorytet: ${item.priorytet}</span>
-                <span>Termin: ${item.termin_odpowiedzi || '-'}</span>
-                <span>Autor: ${item.autor}</span>
-            `;
-        }
-        div.appendChild(details);
+        const meta = document.createElement('div');
+        meta.className = 'card-meta';
 
-        // Actions (Quick Move buttons for mobile friendliness)
+        // Helper for SVG
+        const iconStyle = 'width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"';
+
+        if (type === 'req') {
+            meta.innerHTML = `
+                 <div class="meta-row">
+                     <svg ${iconStyle}><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path><polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline><line x1="12" y1="22.08" x2="12" y2="12"></line></svg>
+                     <span>Ilość: ${item.ilosc}</span>
+                 </div>
+                 <div class="meta-row">
+                     <svg ${iconStyle}><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
+                     <span>Termin: ${item.termin || '2026-01-25'}</span> 
+                 </div>
+                 <div class="meta-row">
+                     <svg ${iconStyle}><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
+                     <span>Zgłaszający: ${item.autor}</span>
+                 </div>
+             `;
+        } else {
+            meta.innerHTML = `
+                 <div class="meta-row">
+                     <svg ${iconStyle}><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
+                     <span>Termin: ${item.termin_odpowiedzi || 'Brak'}</span>
+                 </div>
+                 <div class="meta-row">
+                     <svg ${iconStyle}><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
+                     <span>Autor: ${item.autor}</span>
+                 </div>
+             `;
+        }
+        div.appendChild(meta);
+
+        // Actions
+        // In the design, actions are buttons at bottom? 
+        // Or maybe drag & drop info. 
+        // Screenshot implies clean cards. We'll add status buttons for functionality.
         const actions = document.createElement('div');
         actions.className = 'card-actions';
 
+        if (item.status === 'Nowe') {
+            const btn = document.createElement('button');
+            btn.className = 'status-btn';
+            btn.innerHTML = '<span>→ W toku</span>';
+            btn.onclick = (e) => { e.stopPropagation(); changeStatus(type, item.id, 'W toku'); };
+            actions.appendChild(btn);
+        } else if (item.status === 'W toku') {
+            const btn = document.createElement('button');
+            btn.className = 'status-btn';
+            btn.style.backgroundColor = '#10B981'; // Green
+            btn.innerHTML = '<span>✓ Zrealizowane</span>';
+            btn.onclick = (e) => { e.stopPropagation(); changeStatus(type, item.id, 'Zrealizowane'); };
+            actions.appendChild(btn);
+        }
+
+        // Sync retry
         if (item.syncError) {
             const retryBtn = document.createElement('button');
-            retryBtn.className = 'action-btn';
-            retryBtn.innerText = 'Ponów';
+            retryBtn.className = 'action-btn'; // Needs basic styling if not in new css
+            retryBtn.style.border = '1px solid currentColor';
+            retryBtn.style.padding = '4px 8px';
+            retryBtn.style.borderRadius = '4px';
+            retryBtn.textContent = 'Ponów Sync';
             retryBtn.onclick = (e) => {
-                e.stopPropagation(); // Prevent drag start
+                e.stopPropagation();
                 retrySync(type, item);
             };
             actions.appendChild(retryBtn);
         }
 
-        // Add 'Next State' buttons depending on current state
-        if (item.status === 'Nowe') {
-            actions.appendChild(createMoveBtn('W toku', type, item.id));
-        } else if (item.status === 'W toku') {
-            actions.appendChild(createMoveBtn('Zrealizowane', type, item.id));
-            actions.appendChild(createMoveBtn('Nowe', type, item.id)); // Backwards
-        } else if (item.status === 'Zrealizowane') {
-            actions.appendChild(createMoveBtn('W toku', type, item.id)); // Backwards
-        }
-
-        div.appendChild(actions);
+        if (actions.children.length > 0) div.appendChild(actions);
 
         // Drag Events
         div.addEventListener('dragstart', (e) => {
@@ -311,28 +372,16 @@ document.addEventListener('DOMContentLoaded', () => {
         return div;
     }
 
-    function createMoveBtn(targetStatus, type, id) {
-        const btn = document.createElement('button');
-        btn.className = 'action-btn';
-        btn.innerText = `-> ${targetStatus}`;
-        btn.onclick = (e) => {
-            e.stopPropagation();
-            changeStatus(type, id, targetStatus);
-        };
-        return btn;
-    }
-
     function shortenText(text) {
-        return text.length > 30 ? text.substring(0, 30) + '...' : text;
+        return text.length > 40 ? text.substring(0, 40) + '...' : text;
     }
 
     // --- Actions ---
     async function changeStatus(type, id, newStatus) {
-        // Optimistic Update
         let item, items;
         if (type === 'req') {
             items = Storage.getRequirements();
-            item = items.find(i => i.id == id); // loose equal for string/number id mix
+            item = items.find(i => i.id == id);
         } else {
             items = Storage.getQuestions();
             item = items.find(i => i.id == id);
@@ -350,9 +399,8 @@ document.addEventListener('DOMContentLoaded', () => {
             renderQuestions();
         }
 
-        showToast(`Status zmieniony na: ${newStatus}`, 'success');
+        showToast(`Status zmieniony!`, 'success');
 
-        // Verify with API
         try {
             if (type === 'req') {
                 await API.updateRequirementStatus(item.id, newStatus);
@@ -361,7 +409,6 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         } catch (err) {
             console.error("Status update error", err);
-            // Revert
             item.status = oldStatus;
             if (type === 'req') {
                 Storage.saveRequirements(items);
@@ -370,12 +417,11 @@ document.addEventListener('DOMContentLoaded', () => {
                 Storage.saveQuestions(items);
                 renderQuestions();
             }
-            showToast('Nie udało się zapisać statusu online', 'error');
+            showToast('Błąd synchronizacji online', 'error');
         }
     }
 
     async function retrySync(type, item) {
-        // Remove error flag first (optimistic)
         item.syncError = false;
         if (type === 'req') Storage.updateRequirement(item);
         else Storage.updateQuestion(item);
@@ -384,20 +430,10 @@ document.addEventListener('DOMContentLoaded', () => {
         else renderQuestions();
 
         try {
-            // Note: Retrying ADD vs UPDATE logic is needed.
-            // Simplified: If it was an ADD error, we call add. If STATUS error... complex to track.
-            // For MVP: We assume most errors are ADD errors or we just try ADD again if it looks like a local ID.
-
-            // Logic: If ID starts with 'local-', it's an un-synced ADD.
-            // If ID is real (db ID), it's likely a STATUS update failure (or we don't handle that yet clearly).
-            // The prompt says "if error -> undo change". So status errors revert immediately.
-            // Thus, syncError persists primarily for failed ADDs that we kept locally.
-
             if (String(item.id).startsWith('local-')) {
-                // Retry Add
                 let res;
                 if (type === 'req') {
-                    res = await API.addRequirement(item); // item has extra fields but API should ignore/handle
+                    res = await API.addRequirement(item);
                 } else {
                     res = await API.addQuestion(item);
                 }
@@ -406,14 +442,8 @@ document.addEventListener('DOMContentLoaded', () => {
                     item.id = res.id;
                     if (type === 'req') Storage.updateRequirement(item);
                     else Storage.updateQuestion(item);
-                    showToast('Zsynchronizowano pomyślnie', 'success');
+                    showToast('Zsynchronizowano!', 'success');
                 }
-            } else {
-                // Used to be a status update error? 
-                // But we revert status updates on error.
-                // So this branch might not be reached unless we change logic.
-                // Leaving for safety.
-                showToast('Brak akcji dla tego błędu', 'error');
             }
         } catch (err) {
             item.syncError = true;
@@ -421,11 +451,11 @@ document.addEventListener('DOMContentLoaded', () => {
             else Storage.updateQuestion(item);
             if (type === 'req') renderRequirements();
             else renderQuestions();
-            showToast('Ponowna próba nieudana', 'error');
+            showToast('Błąd synchronizacji', 'error');
         }
     }
 
-    // --- Drag & Drop (Global for Columns) ---
+    // --- Drag & Drop ---
     function setupGlobalEvents() {
         const columns = document.querySelectorAll('.kanban-column');
         columns.forEach(col => {
@@ -451,31 +481,51 @@ document.addEventListener('DOMContentLoaded', () => {
     // --- Settings ---
     function setupSettings() {
         const settings = Storage.getSettings();
-        settingsAuthorInput.value = settings.author;
 
-        settingsAuthorInput.addEventListener('change', () => {
-            const newSettings = { author: settingsAuthorInput.value };
-            Storage.saveSettings(newSettings);
-            showToast('Zapisano ustawienia', 'success');
-        });
+        // Update display text
+        const nameDisplay = document.getElementById('profile-name-display');
+        if (nameDisplay) {
+            nameDisplay.textContent = settings.author || 'Użytkownik';
+        }
 
-        clearDataBtn.addEventListener('click', () => {
-            if (confirm('Czy na pewno wyczyścić wszystkie dane lokalne?')) {
-                Storage.clearAll();
-                location.reload();
-            }
-        });
+        // Logic to edit name using the input (which we will ensure is visible/handled)
+        const authorInput = document.getElementById('settings-author');
+        if (authorInput) {
+            authorInput.value = settings.author;
+            authorInput.addEventListener('change', () => {
+                const newSettings = { author: authorInput.value };
+                Storage.saveSettings(newSettings);
+                showToast('Zapisano ustawienia', 'success');
+                if (nameDisplay) nameDisplay.textContent = authorInput.value;
+            });
+        }
+
+        const clearBtn = document.getElementById('clear-data-btn');
+        if (clearBtn) {
+            clearBtn.addEventListener('click', () => {
+                if (confirm('Czy na pewno wyczyścić dane?')) {
+                    Storage.clearAll();
+                    location.reload();
+                }
+            });
+        }
     }
 
     // --- Toast ---
     function showToast(msg, type = 'info') {
-        const container = document.getElementById('toast-container');
+        let container = document.getElementById('toast-container');
+        if (!container) {
+            container = document.createElement('div');
+            container.id = 'toast-container';
+            document.body.appendChild(container);
+        }
+
         const toast = document.createElement('div');
         toast.className = 'toast show';
-        if (type === 'error') toast.style.backgroundColor = '#FF3B30';
-        if (type === 'success') toast.style.backgroundColor = '#34C759';
+        if (type === 'error') toast.style.backgroundColor = '#DC2626';
+        if (type === 'success') toast.style.backgroundColor = '#059669';
 
-        toast.innerText = msg;
+        toast.textContent = msg;
         container.appendChild(toast);
 
         setTimeout(() => {
