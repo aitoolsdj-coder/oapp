@@ -29,6 +29,20 @@ const Storage = {
         }
     },
 
+    syncRequirements(serverItems) {
+        // Filter empty records
+        let validServerItems = serverItems.filter(item => item.co && item.co.trim() !== '');
+
+        const localItems = this.getRequirements();
+        // Keep local items that are unsynced (id starts with 'local-')
+        const unsyncedItems = localItems.filter(item => String(item.id).startsWith('local-'));
+
+        // Merge: Server items + Unsynced local items
+        // Note: Server is truth for anything synced. older local cache of synced items is discarded.
+        const merged = [...validServerItems, ...unsyncedItems];
+        this.saveRequirements(merged);
+    },
+
     getQuestions() {
         const data = localStorage.getItem(this.KEYS.QUESTIONS);
         return data ? JSON.parse(data) : [];
@@ -51,6 +65,17 @@ const Storage = {
             items[index] = updatedItem;
             this.saveQuestions(items);
         }
+    },
+
+    syncQuestions(serverItems) {
+        // Filter empty records
+        let validServerItems = serverItems.filter(item => item.opis && item.opis.trim() !== '');
+
+        const localItems = this.getQuestions();
+        const unsyncedItems = localItems.filter(item => String(item.id).startsWith('local-'));
+
+        const merged = [...validServerItems, ...unsyncedItems];
+        this.saveQuestions(merged);
     },
 
     getSettings() {
