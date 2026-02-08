@@ -3,325 +3,179 @@
 
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport"
-        content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <meta name="theme-color" content="#F2F2F7">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>OAPP v3</title>
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#003264">
+    <link rel="stylesheet" href="style.css">
+    <link rel="icon" type="image/png" href="icon-192.png">
+    <!-- PWA iOS settings -->
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <meta name="apple-mobile-web-app-title" content="OAPP">
-    <title>OAPP – Olefiny</title>
-    <link rel="manifest" href="manifest.json">
-    <link rel="stylesheet" href="style.css">
-    <link rel="apple-touch-icon" href="icons/icon-192.png">
+    <meta name="apple-mobile-web-app-title" content="OAPP v3">
 </head>
 
 <body>
 
-    <body>
+    <div id="app">
+        <!-- Zapotrzebowania View -->
+        <div id="view-orders" class="view active">
+            <header>
+                <h1>Zapotrzebowania</h1>
+                <button id="refresh-orders" class="refresh-btn" aria-label="Odśwież">↻</button>
+            </header>
 
-        <!-- Header -->
-        <header class="app-header">
-            <div class="header-content">
-                <div class="logo-container">
-                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
-                        stroke-linecap="round" stroke-linejoin="round" class="header-icon">
-                        <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
-                        <line x1="9" y1="3" x2="9" y2="21"></line>
-                    </svg>
-                    <h1>OAPP</h1>
+            <div class="content">
+                <section class="add-form-section">
+                    <button class="toggle-form-btn" onclick="toggleForm('orders-form-container')">+ Nowe
+                        Zapotrzebowanie</button>
+                    <div id="orders-form-container" class="form-container hidden">
+                        <form id="orders-form">
+                            <input type="text" name="co" placeholder="Co potrzeba? *" required>
+                            <input type="text" name="ilosc" placeholder="Ilość *" required>
+                            <input type="text" name="producent" placeholder="Producent (opcjonalnie)">
+                            <input type="text" name="autor" placeholder="Autor (opcjonalnie)">
+                            <textarea name="uwagi" placeholder="Uwagi (opcjonalnie)"></textarea>
+                            <button type="submit" class="submit-btn">Dodaj</button>
+                        </form>
+                    </div>
+                </section>
+
+                <div class="kanban-board" id="orders-board">
+                    <!-- Columns will be injected by JS -->
                 </div>
             </div>
-            <div class="header-actions">
-                <div id="connection-status" class="status-indicator online">
-                    <div class="status-dot"></div>
-                    <span class="status-text">Online</span>
+        </div>
+
+        <!-- Pytania View -->
+        <div id="view-items" class="view">
+            <header>
+                <h1>Pytania</h1>
+                <button id="refresh-items" class="refresh-btn" aria-label="Odśwież">↻</button>
+            </header>
+
+            <div class="content">
+                <section class="add-form-section">
+                    <button class="toggle-form-btn" onclick="toggleForm('items-form-container')">+ Nowe Pytanie</button>
+                    <div id="items-form-container" class="form-container hidden">
+                        <form id="items-form">
+                            <input type="text" name="opis" placeholder="Treść pytania *" required>
+                            <input type="date" name="termin_odpowiedzi" placeholder="Termin odpowiedzi">
+                            <select name="priorytet">
+                                <option value="Niski">Niski</option>
+                                <option value="Średni" selected>Średni</option>
+                                <option value="Wysoki">Wysoki</option>
+                            </select>
+                            <input type="text" name="autor" placeholder="Autor (opcjonalnie)">
+                            <button type="submit" class="submit-btn">Dodaj</button>
+                        </form>
+                    </div>
+                </section>
+
+                <div class="kanban-board" id="items-board">
+                    <!-- Columns will be injected by JS -->
                 </div>
             </div>
-        </header>
+        </div>
 
-        <!-- Main Content -->
-        <main id="main-content">
-            <!-- Zapotrzebowania View -->
-            <section id="zapotrzebowania" class="tab-content active">
-                <div class="section-actions-bar">
-                    <h2>Zapotrzebowania</h2>
-                    <div class="action-buttons">
-                        <button class="refresh-btn" id="refresh-req-btn">
-                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                                stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                <path d="M23 4v6h-6"></path>
-                                <path d="M1 20v-6h6"></path>
-                                <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path>
-                            </svg>
-                        </button>
-                        <button class="add-btn" id="add-req-btn">
-                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                                stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                <line x1="12" y1="5" x2="12" y2="19"></line>
-                                <line x1="5" y1="12" x2="19" y2="12"></line>
-                            </svg>
-                            Dodaj
-                        </button>
-                    </div>
+        <!-- Dokumentacja (Files) View -->
+        <div id="view-docs" class="view">
+            <header>
+                <h1>Dokumentacja</h1>
+            </header>
+            <div class="content docs-content">
+                <!-- Google Drive Embed -->
+                <div class="drive-embed-container">
+                    <iframe src="https://drive.google.com/embeddedfolderview?id=1iURUi0OKIleXiPBbYsfZSKutvIRBJWmS#grid"
+                        class="drive-frame" title="Pliki Google Drive" allowfullscreen>
+                    </iframe>
                 </div>
 
-                <!-- Middle: Horizontal Kanban -->
-                <div class="kanban-scroll-container">
-                    <div class="kanban-row">
-                        <div class="kanban-card-wrapper" data-status="Nowe">
-                            <h3>NOWE</h3>
-                            <div class="kanban-list-horizontal" id="req-kanban-nowe"></div>
-                        </div>
-                        <div class="kanban-card-wrapper" data-status="W toku">
-                            <h3>W TOKU</h3>
-                            <div class="kanban-list-horizontal" id="req-kanban-w-toku"></div>
-                        </div>
-                    </div>
+                <a href="https://drive.google.com/drive/folders/1iURUi0OKIleXiPBbYsfZSKutvIRBJWmS?usp=sharing"
+                    target="_blank" class="drive-btn">
+                    📂 Otwórz folder w Google Drive
+                </a>
+
+                <div class="links-section">
+                    <h2>Ważne linki</h2>
+                    <ul id="links-list">
+                        <!-- Links injected by JS -->
+                    </ul>
+                    <button class="add-link-btn" onclick="addNewLink()">+ Dodaj link</button>
                 </div>
+            </div>
+        </div>
 
-                <!-- Bottom: Read-only List -->
-                <div class="list-view-container">
-                    <h3>Wszystkie zapotrzebowania</h3>
-                    <div class="list-view-content" id="req-list-all"></div>
-                </div>
-            </section>
-
-            <!-- Pytania View -->
-            <section id="pytania" class="tab-content">
-                <div class="section-actions-bar">
-                    <h2>Pytania</h2>
-                    <div class="action-buttons">
-                        <button class="refresh-btn" id="refresh-q-btn">
-                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                                stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                <path d="M23 4v6h-6"></path>
-                                <path d="M1 20v-6h6"></path>
-                                <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path>
-                            </svg>
-                        </button>
-                        <button class="add-btn" id="add-q-btn">
-                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                                stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                <line x1="12" y1="5" x2="12" y2="19"></line>
-                                <line x1="5" y1="12" x2="19" y2="12"></line>
-                            </svg>
-                            Dodaj
-                        </button>
-                    </div>
-                </div>
-
-                <div class="kanban-scroll-container">
-                    <div class="kanban-row">
-                        <div class="kanban-card-wrapper" data-status="Nowe">
-                            <h3>NOWE</h3>
-                            <div class="kanban-list-horizontal" id="q-kanban-nowe"></div>
-                        </div>
-                        <div class="kanban-card-wrapper" data-status="W toku">
-                            <h3>W TOKU</h3>
-                            <div class="kanban-list-horizontal" id="q-kanban-w-toku"></div>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="list-view-container">
-                    <h3>Wszystkie pytania</h3>
-                    <div class="list-view-content" id="q-list-all"></div>
-                </div>
-            </section>
-
-            <!-- Ustawienia View -->
-            <section id="ustawienia" class="tab-content">
-                <div class="view-header">
-                    <h2>Ustawienia</h2>
-                </div>
-
-                <div class="settings-profile-card">
-                    <div class="profile-avatar">
-                        <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                            stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
-                            <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
-                            <circle cx="12" cy="7" r="4"></circle>
-                        </svg>
-                    </div>
-                    <div class="profile-info">
-                        <!-- Editable input styled as text -->
-                        <input type="text" id="settings-author" class="profile-name-input" placeholder="Wpisz imię">
-                        <p>kuba@cgas.pl</p>
-                    </div>
-                </div>
-
-                <div class="settings-list">
-                    <div class="settings-group-title">KONTO</div>
-                    <div class="settings-item">
-                        <div class="settings-item-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none"
-                                stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
-                                <circle cx="12" cy="7" r="4"></circle>
-                            </svg></div>
-                        <div class="settings-item-label">Profil użytkownika</div>
-                        <div class="settings-item-arrow">›</div>
-                    </div>
-                    <div class="settings-item">
-                        <div class="settings-item-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none"
-                                stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path>
-                                <path d="M13.73 21a2 2 0 0 1-3.46 0"></path>
-                            </svg></div>
-                        <div class="settings-item-label">Powiadomienia</div>
-                        <div class="settings-item-arrow">›</div>
-                    </div>
-
-                    <div class="settings-group-title">BEZPIECZEŃSTWO</div>
-                    <div class="settings-item">
-                        <div class="settings-item-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none"
-                                stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
-                            </svg></div>
-                        <div class="settings-item-label">Zmień hasło</div>
-                        <div class="settings-item-arrow">›</div>
-                    </div>
-
-                    <div class="settings-group-title">O APLIKACJI</div>
-                    <div class="settings-item">
-                        <div class="settings-item-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none"
-                                stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                <circle cx="12" cy="12" r="10"></circle>
-                                <line x1="12" y1="16" x2="12" y2="12"></line>
-                                <line x1="12" y1="8" x2="12.01" y2="8"></line>
-                            </svg></div>
-                        <div class="settings-item-label">Informacje</div>
-                        <div class="settings-item-arrow">›</div>
-                    </div>
-                </div>
-
-                <div class="settings-logout-container">
-                    <button id="clear-data-btn" class="logout-btn">
-                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                            stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                            <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
-                            <polyline points="16 17 21 12 16 7"></polyline>
-                            <line x1="21" y1="12" x2="9" y2="12"></line>
-                        </svg>
-                        Wyloguj się (Wyczyść)
+        <!-- Chat AI View -->
+        <div id="view-chat" class="view">
+            <header>
+                <h1>Chat i Ustawienia</h1>
+            </header>
+            <div class="content chat-content">
+                <div class="chat-main-action">
+                    <button id="open-chat-btn" class="chat-open-btn">
+                        🤖 Otwórz Chat AI
                     </button>
+                    <p class="chat-hint">Otwiera NotebookLM w nowej karcie</p>
                 </div>
 
-                <!-- Hidden inputs for actual logic -->
-                <div style="display:none">
-                    <input type="text" id="settings-author">
-                </div>
+                <div class="chat-settings">
+                    <h2>Ustawienia Aplikacji</h2>
 
-            </section>
-        </main>
+                    <div class="setting-group">
+                        <label for="user-name-input">Użytkownik (Autor)</label>
+                        <input type="text" id="user-name-input" placeholder="Twoje imię / nazwisko">
+                        <p class="setting-hint">Automatycznie uzupełnia pole "Autor"</p>
+                    </div>
+
+                    <div class="setting-group">
+                        <label for="chat-link-input">Link do Chat AI (NotebookLM)</label>
+                        <input type="text" id="chat-link-input" placeholder="Wklej link do notatnika...">
+                    </div>
+
+                    <div class="settings-actions">
+                        <button id="test-connection-btn" class="test-conn-btn">📡 Testuj połączenie</button>
+                        <button id="save-settings-btn" class="save-settings-btn">Zapisz ustawienia</button>
+                    </div>
+                </div>
+            </div>
+        </div>
 
         <!-- Bottom Navigation -->
-        <nav class="tab-nav">
-            <button class="tab-btn active" data-tab="zapotrzebowania">
-                <div class="tab-icon">
-                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
-                        stroke-linecap="round" stroke-linejoin="round">
-                        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
-                        <polyline points="14 2 14 8 20 8"></polyline>
-                        <line x1="16" y1="13" x2="8" y2="13"></line>
-                        <line x1="16" y1="17" x2="8" y2="17"></line>
-                        <polyline points="10 9 9 9 8 9"></polyline>
-                    </svg>
-                </div>
-                <span>Zapotrzebowania</span>
+        <nav class="bottom-nav">
+            <button class="nav-btn active" data-target="view-orders">
+                <span class="icon">📦</span>
+                <span class="label">Zapotrzebowania</span>
             </button>
-            <button class="tab-btn" data-tab="pytania">
-                <div class="tab-icon">
-                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
-                        stroke-linecap="round" stroke-linejoin="round">
-                        <path
-                            d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z">
-                        </path>
-                    </svg>
-                </div>
-                <span>Pytania</span>
+            <button class="nav-btn" data-target="view-items">
+                <span class="icon">❓</span>
+                <span class="label">Pytania</span>
             </button>
-            <button class="tab-btn" data-tab="ustawienia">
-                <div class="tab-icon">
-                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
-                        stroke-linecap="round" stroke-linejoin="round">
-                        <circle cx="12" cy="12" r="3"></circle>
-                        <path
-                            d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z">
-                        </path>
-                    </svg>
-                </div>
-                <span>Ustawienia</span>
+            <button class="nav-btn" data-target="view-docs">
+                <span class="icon">📂</span>
+                <span class="label">Pliki</span>
+            </button>
+            <button class="nav-btn" data-target="view-chat">
+                <span class="icon">🤖</span>
+                <span class="label">Chat AI</span>
             </button>
         </nav>
+    </div>
 
-        <!-- Modals -->
-        <div id="modal-req" class="modal">
-            <div class="modal-content">
-                <span class="close-modal">&times;</span>
-                <h2>Nowe Zapotrzebowanie</h2>
-                <form id="form-req">
-                    <div class="form-group">
-                        <label for="req-what">Co potrzebujesz? *</label>
-                        <input type="text" id="req-what" required>
-                    </div>
-                    <div class="form-group">
-                        <label for="req-amount">Ilość *</label>
-                        <input type="text" id="req-amount" required>
-                    </div>
-                    <div class="form-group">
-                        <label for="req-producer">Producent</label>
-                        <input type="text" id="req-producer">
-                    </div>
-                    <div class="form-group">
-                        <label for="req-notes">Uwagi</label>
-                        <textarea id="req-notes"></textarea>
-                    </div>
-                    <button type="submit" class="submit-btn">Zapisz</button>
-                </form>
-            </div>
-        </div>
+    <div id="toast-container"></div>
 
-        <div id="modal-q" class="modal">
-            <div class="modal-content">
-                <span class="close-modal">&times;</span>
-                <h2>Nowe Pytanie</h2>
-                <form id="form-q">
-                    <div class="form-group">
-                        <label for="q-desc">Opis pytania *</label>
-                        <textarea id="q-desc" required></textarea>
-                    </div>
-                    <div class="form-group">
-                        <label for="q-date">Termin odpowiedzi</label>
-                        <input type="date" id="q-date">
-                    </div>
-                    <div class="form-group">
-                        <label for="q-priority">Priorytet *</label>
-                        <select id="q-priority">
-                            <option value="Niski">Niski</option>
-                            <option value="Sredni" selected>Średni</option>
-                            <option value="Wysoki">Wysoki</option>
-                        </select>
-                    </div>
-                    <button type="submit" class="submit-btn">Zapisz</button>
-                </form>
-            </div>
-        </div>
-
-        <!-- Toast Notification -->
-        <div id="toast-container"></div>
-
-        <script src="storage.js"></script>
-        <script src="api.js"></script>
-        <script src="app.js"></script>
-        <script>
-            if ('serviceWorker' in navigator) {
-                window.addEventListener('load', () => {
-                    navigator.serviceWorker.register('./sw.js')
-                        .then(reg => console.log('SW register success', reg))
-                        .catch(err => console.log('SW register fail', err));
-                });
-            }
-        </script>
-    </body>
+    <script src="storage.js"></script>
+    <script src="api.js"></script>
+    <script src="app.js"></script>
+    <script>
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('./sw.js')
+                    .then(reg => console.log('[OAPP] SW registered!', reg))
+                    .catch(err => console.log('[OAPP] SW registration failed', err));
+            });
+        }
+    </script>
+</body>
 
 </html>

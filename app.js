@@ -1,502 +1,537 @@
-document.addEventListener('DOMContentLoaded', () => {
-    // --- State & Constants ---
-    const STATUSES = ['Nowe', 'W toku', 'Zrealizowane'];
-    let currentDragItem = null;
-    let currentDragType = null; // 'req' or 'q'
+/**
+ * OAPP v3 - Main Application Logic
+ */
 
-    // --- DOM Elements ---
-    const tabs = document.querySelectorAll('.tab-btn');
-    const contents = document.querySelectorAll('.tab-content');
+/* --- State & Config --- */
+const AppState = {
+    currentView: 'view-orders', // Default
+    syncInterval: 86400000,     // 24 hours in ms
+    isOffline: !navigator.onLine
+};
 
-    // Modals
-    const modalReq = document.getElementById('modal-req');
-    const modalQ = document.getElementById('modal-q');
-    const closeBtns = document.querySelectorAll('.close-modal');
-
+/* --- DOM Elements --- */
+const Elements = {
+    views: document.querySelectorAll('.view'),
+    navButtons: document.querySelectorAll('.nav-btn'),
+    ordersBoard: document.getElementById('orders-board'),
+    itemsBoard: document.getElementById('items-board'),
+    refreshButtons: document.querySelectorAll('.refresh-btn'),
     // Forms
-    const formReq = document.getElementById('form-req');
-    const formQ = document.getElementById('form-q');
+    ordersForm: document.getElementById('orders-form'),
+    itemsForm: document.getElementById('items-form'),
+    // Documentation
+    linksList: document.getElementById('links-list'),
+    // Chat AI & Settings
+    chatLinkInput: document.getElementById('chat-link-input'),
+    userNameInput: document.getElementById('user-name-input'),
+    saveSettingsBtn: document.getElementById('save-settings-btn'),
+    testConnectionBtn: document.getElementById('test-connection-btn'),
+    openChatBtn: document.getElementById('open-chat-btn')
+};
 
-    // Boards & Lists
-    // Req
-    const reqKanbanNowe = document.getElementById('req-kanban-nowe');
-    const reqKanbanW = document.getElementById('req-kanban-w-toku');
-    const reqListAll = document.getElementById('req-list-all');
-    // Q
-    const qKanbanNowe = document.getElementById('q-kanban-nowe');
-    const qKanbanW = document.getElementById('q-kanban-w-toku');
-    const qListAll = document.getElementById('q-list-all');
+/* --- UI Utilities --- */
+function showToast(message, duration = 3000) {
+    const container = document.getElementById('toast-container');
+    const toast = document.createElement('div');
+    toast.className = 'toast';
+    toast.textContent = message;
+    container.appendChild(toast);
+    setTimeout(() => toast.remove(), duration);
+}
 
-    // Buttons
-    const refreshReqBtn = document.getElementById('refresh-req-btn');
-    const refreshQBtn = document.getElementById('refresh-q-btn');
-    const connectionStatus = document.getElementById('connection-status');
+function toggleForm(containerId) {
+    const container = document.getElementById(containerId);
+    container.classList.toggle('hidden');
 
-    // Settings
-    const settingsAuthorInput = document.getElementById('settings-author');
-    const clearDataBtn = document.getElementById('clear-data-btn');
-
-    // --- Initialization ---
-    init();
-
-    function init() {
-        setupTabs();
-        setupModals();
-        setupForms();
-        setupSettings();
-        setupSyncLogic();
-        renderRequirements();
-        renderQuestions();
-        updateOnlineStatus(); // Initial check
-    }
-
-    // --- Tabs ---
-    function setupTabs() {
-        tabs.forEach(tab => {
-            tab.addEventListener('click', () => {
-                tabs.forEach(t => t.classList.remove('active'));
-                contents.forEach(c => c.classList.remove('active'));
-
-                tab.classList.add('active');
-                document.getElementById(tab.dataset.tab).classList.add('active');
-            });
-        });
-    }
-
-    // --- Modals ---
-    function setupModals() {
-        if (document.getElementById('add-req-btn')) {
-            document.getElementById('add-req-btn').addEventListener('click', () => {
-                modalReq.style.display = 'flex';
-            });
-        }
-
-        if (document.getElementById('add-q-btn')) {
-            document.getElementById('add-q-btn').addEventListener('click', () => {
-                modalQ.style.display = 'flex';
-            });
-        }
-
-        closeBtns.forEach(btn => {
-            btn.addEventListener('click', (e) => {
-                e.target.closest('.modal').style.display = 'none';
-            });
-        });
-
-        window.addEventListener('click', (e) => {
-            if (e.target.classList.contains('modal')) {
-                e.target.style.display = 'none';
+    // Auto-fill Author if opening form
+    if (!container.classList.contains('hidden')) {
+        const userName = Storage.getUserName();
+        if (userName) {
+            const form = container.querySelector('form');
+            if (form && form.elements.autor && !form.elements.autor.value) {
+                form.elements.autor.value = userName;
             }
+        }
+    }
+}
+
+function updateConnectionStatus() {
+    AppState.isOffline = !navigator.onLine;
+    if (AppState.isOffline) {
+        showToast('Brak sieci. Tryb offline.', 4000);
+        document.body.classList.add('offline-mode');
+    } else {
+        showToast('Online. Przywrócono połączenie.', 4000);
+        document.body.classList.remove('offline-mode');
+        // Try to sync current view when back online
+        syncCurrentView();
+    }
+}
+
+/* --- Rendering --- */
+
+// --- Kanban Board Render (Generic) ---
+function renderKanban(container, items, type) {
+    container.innerHTML = '';
+    const statuses = ['Nowe', 'W toku', 'Zrealizowane'];
+
+    statuses.forEach(status => {
+        const column = document.createElement('div');
+        column.className = 'kanban-column';
+        column.dataset.status = status;
+
+        const header = document.createElement('h3');
+        header.textContent = status;
+        column.appendChild(header);
+
+        const statusItems = items.filter(item => item.status === status);
+
+        statusItems.forEach(item => {
+            const card = createCard(item, type);
+            column.appendChild(card);
         });
+
+        container.appendChild(column);
+    });
+}
+
+function createCard(item, type) {
+    const card = document.createElement('div');
+    card.className = 'card';
+    card.dataset.id = item.id;
+
+    // Determine content based on type
+    let titleHtml = '';
+    let metaHtml = '';
+    let extraHtml = '';
+
+    if (type === 'order') {
+        titleHtml = `<span class="card-title">${item.co} (${item.ilosc})</span>`;
+        metaHtml = `
+            ${item.producent ? `Prod: ${item.producent}` : ''} 
+            ${item.autor ? `| Autor: ${item.autor}` : ''}
+        `;
+    } else if (type === 'item') {
+        const priorityClass = `priority-${item.priorytet || 'Średni'}`;
+        titleHtml = `
+            <span class="card-title">${item.opis}</span>
+            <span class="priority-badge ${priorityClass}">${item.priorytet || 'Średni'}</span>
+        `;
+        metaHtml = `
+            ${item.termin_odpowiedzi ? `Termin: ${item.termin_odpowiedzi}` : ''}
+            ${item.autor ? `| Autor: ${item.autor}` : ''}
+        `;
+        if (item.odpowiedz) {
+            extraHtml = `<div class="card-answer"><strong>Odp:</strong> ${item.odpowiedz}</div>`;
+        }
     }
 
-    // --- Sync Logic ---
-    function setupSyncLogic() {
-        window.addEventListener('online', () => {
-            updateOnlineStatus();
-            performSync();
-        });
-        window.addEventListener('offline', updateOnlineStatus);
+    // Status Actions
+    const actionsHtml = `
+        <div class="status-actions">
+            <button class="status-btn" onclick="updateStatus('${type}', '${item.id}', 'Nowe')" title="Na nowe">N</button>
+            <button class="status-btn" onclick="updateStatus('${type}', '${item.id}', 'W toku')" title="W toku">W</button>
+            <button class="status-btn" onclick="updateStatus('${type}', '${item.id}', 'Zrealizowane')" title="Zrealizowane">Z</button>
+        </div>
+    `;
 
-        if (refreshReqBtn) {
-            refreshReqBtn.addEventListener('click', performSync);
-        }
-        if (refreshQBtn) {
-            refreshQBtn.addEventListener('click', performSync);
-        }
+    card.innerHTML = `
+        <div class="card-header">
+            <div class="card-title-area">${titleHtml}</div>
+            ${actionsHtml}
+        </div>
+        <div class="card-meta">${metaHtml}</div>
+        ${extraHtml}
+    `;
 
-        // Initial sync if online
-        if (navigator.onLine) {
-            performSync();
-        }
-    }
+    return card;
+}
 
-    function updateOnlineStatus() {
-        if (navigator.onLine) {
-            connectionStatus.classList.remove('offline');
-            connectionStatus.classList.add('online');
-            connectionStatus.innerHTML = '<div class="status-dot"></div><span class="status-text">Online</span>';
-        } else {
-            connectionStatus.classList.remove('online');
-            connectionStatus.classList.add('offline');
-            connectionStatus.innerHTML = '<div class="status-dot"></div><span class="status-text">Offline</span>';
-        }
-    }
+// --- Status Updates ---
+async function updateStatus(type, id, newStatus) {
+    console.log(`[OAPP] Updating ${type} ${id} to ${newStatus}`);
 
-    async function performSync() {
-        if (!navigator.onLine) {
-            showToast('Brak sieci. Tryb offline.', 'error');
+    // Optimistic Update
+    let currentItems = type === 'order' ? Storage.getOrders() : Storage.getItems();
+    const itemIndex = currentItems.findIndex(i => i.id === id);
+
+    if (itemIndex > -1) {
+        if (currentItems[itemIndex].status === newStatus) return; // No change
+
+        const oldStatus = currentItems[itemIndex].status;
+        currentItems[itemIndex].status = newStatus;
+
+        // Save locally immediately
+        if (type === 'order') Storage.saveOrders(currentItems);
+        else Storage.saveItems(currentItems);
+
+        // Re-render immediately
+        if (type === 'order') renderKanban(Elements.ordersBoard, currentItems, 'order');
+        else renderKanban(Elements.itemsBoard, currentItems, 'item');
+
+        // Check for local ID
+        if (String(id).startsWith('local-')) {
+            showToast('Element lokalny - status zaktualizowany tylko lokalnie.');
             return;
         }
 
-        showToast('Synchronizacja...', 'info');
-        try {
-            // 1. Fetch Lists
-            const [reqs, qs] = await Promise.all([
-                API.getRequirements(),
-                API.getQuestions()
-            ]);
-
-            // 2. Sync Logic (merge with local)
-            const normReqs = reqs.map(r => ({
-                ...r,
-                autor: r.autor ?? r["autor (opcjonalnie)"] ?? "",
-                uwagi: r.uwagi ?? r["uwagi (opcjonalnie)"] ?? "",
-                status: (r.status && String(r.status).trim()) ? String(r.status).trim() : "Nowe",
-            }));
-
-            const normQs = qs.map(r => ({
-                ...r,
-                autor: r.autor ?? r["autor (opcjonalnie)"] ?? "",
-                status: (r.status && String(r.status).trim()) ? String(r.status).trim() : "Nowe",
-            }));
-
-            Storage.syncRequirements(normReqs);
-            Storage.syncQuestions(normQs);
-
-            // 3. Re-render
-            renderRequirements();
-            renderQuestions();
-            showToast('Zsynchronizowano pomyślnie!', 'success');
-
-        } catch (e) {
-            console.error(e);
-            showToast('Błąd synchronizacji!', 'error');
-        }
-    }
-
-    // --- Forms & Data Handling ---
-    function setupForms() {
-        formReq.addEventListener('submit', async (e) => {
-            e.preventDefault();
-            const co = document.getElementById('req-what').value;
-            const ilosc = document.getElementById('req-amount').value;
-            const producent = document.getElementById('req-producer').value;
-            const uwagi = document.getElementById('req-notes').value;
-            const settings = Storage.getSettings();
-
-            if (!co || !ilosc) return;
-
-            const newItem = {
-                id: 'local-' + Date.now(),
-                co,
-                ilosc,
-                producent,
-                uwagi,
-                autor: settings.author,
-                status: 'Nowe',
-                createdAt: Date.now(),
-                syncError: false
-            };
-
-            Storage.addRequirement(newItem);
-            renderRequirements();
-            modalReq.style.display = 'none';
-            formReq.reset();
-            showToast('Dodano zapotrzebowanie', 'success');
-
-            // Try push to backend immediately if online
-            if (navigator.onLine) {
-                try {
-                    const response = await API.addRequirement({
-                        co, ilosc, producent, autor: settings.author, uwagi
-                    });
-                    if (response.id) {
-                        // Update ID from server but keep other local changes if any occurred in split second? 
-                        // For now assume simple swap
-                        newItem.id = response.id;
-                        Storage.updateRequirement(newItem);
-                        renderRequirements(); // re-render to update ID in DOM
-                    }
-                } catch (err) {
-                    console.error('Push error', err);
-                    // Remains 'local-' id, will be picked up by future merge strategy or similar
-                }
-            }
-        });
-
-        formQ.addEventListener('submit', async (e) => {
-            e.preventDefault();
-            const opis = document.getElementById('q-desc').value;
-            const termin = document.getElementById('q-date').value;
-            const priorytet = document.getElementById('q-priority').value;
-            const settings = Storage.getSettings();
-
-            if (!opis) return;
-
-            const newItem = {
-                id: 'local-' + Date.now(),
-                opis,
-                termin_odpowiedzi: termin,
-                priorytet,
-                autor: settings.author,
-                status: 'Nowe',
-                createdAt: Date.now(),
-                syncError: false
-            };
-
-            Storage.addQuestion(newItem);
-            renderQuestions();
-            modalQ.style.display = 'none';
-            formQ.reset();
-            showToast('Dodano pytanie', 'success');
-
-            if (navigator.onLine) {
-                try {
-                    const response = await API.addQuestion({
-                        opis, termin_odpowiedzi: termin, priorytet, autor: settings.author
-                    });
-                    if (response.id) {
-                        newItem.id = response.id;
-                        Storage.updateQuestion(newItem);
-                        renderQuestions();
-                    }
-                } catch (err) {
-                    console.error('Push error', err);
-                }
-            }
-        });
-    }
-
-
-    // --- Rendering ---
-    function renderRequirements() {
-        const items = Storage.getRequirements();
-
-        // Clear containers
-        if (reqKanbanNowe) reqKanbanNowe.innerHTML = '';
-        if (reqKanbanW) reqKanbanW.innerHTML = '';
-        if (reqListAll) reqListAll.innerHTML = '';
-
-        items.forEach(item => {
-            if (!item.co) return; // Skip empty
-
-            // 1. Add to Kanban if Status is relevant
-            if (item.status === 'Nowe' && reqKanbanNowe) {
-                reqKanbanNowe.appendChild(createCard('req', item));
-            } else if (item.status === 'W toku' && reqKanbanW) {
-                reqKanbanW.appendChild(createCard('req', item));
-            }
-            // "Zrealizowane" don't show in Kanban (top), only in bottom list usually, 
-            // OR if we had a column for it. We removed column from HTML structure to follow "Horizontal scroll" prompt where usually only active stuff is shown?
-            // User prompt: "KANBAN (SCROLL POZIOMY)" followed by "LISTA ZBIORCZA".
-            // Let's assume Kanban has New + In Progress. 
-
-            // 2. Add to Bottom List (All items)
-            if (reqListAll) {
-                reqListAll.appendChild(createListItem('req', item));
-            }
-        });
-    }
-
-    function renderQuestions() {
-        const items = Storage.getQuestions();
-
-        if (qKanbanNowe) qKanbanNowe.innerHTML = '';
-        if (qKanbanW) qKanbanW.innerHTML = '';
-        if (qListAll) qListAll.innerHTML = '';
-
-        items.forEach(item => {
-            if (!item.opis) return;
-
-            if (item.status === 'Nowe' && qKanbanNowe) {
-                qKanbanNowe.appendChild(createCard('q', item));
-            } else if (item.status === 'W toku' && qKanbanW) {
-                qKanbanW.appendChild(createCard('q', item));
-            }
-
-            if (qListAll) {
-                qListAll.appendChild(createListItem('q', item));
-            }
-        });
-    }
-
-    // --- Components ---
-    function createCard(type, item) {
-        const div = document.createElement('div');
-        div.className = 'card';
-        div.dataset.id = item.id;
-
-        // Badge
-        let badgeClass = 'badge-new';
-        let badgeText = item.status || 'Nowe';
-
-        if (item.status === 'Nowe') {
-            badgeClass = 'badge-new';
-            badgeText = 'NOWE';
-        } else if (item.status === 'W toku') {
-            badgeClass = 'badge-in-progress';
-            badgeText = 'W TOKU';
-        } else if (item.status === 'Zrealizowane') {
-            badgeClass = 'badge-done';
-            badgeText = 'ZREALIZOWANE';
-        }
-
-        const badge = document.createElement('span');
-        badge.className = `card-badge ${badgeClass}`;
-        badge.textContent = badgeText;
-        div.appendChild(badge);
-
-        // Title
-        const title = document.createElement('div');
-        title.className = 'card-title';
-        title.textContent = type === 'req' ? shortenText(item.co, 50) : shortenText(item.opis, 50);
-        div.appendChild(title);
-
-        // Meta
-        const meta = document.createElement('div');
-        meta.className = 'card-meta';
-        const iconStyle = ''; // handled by css
-
-        if (type === 'req') {
-            meta.innerHTML = `
-                 <div class="meta-row">
-                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path><polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline><line x1="12" y1="22.08" x2="12" y2="12"></line></svg>
-                     <span>${item.ilosc}</span>
-                 </div>
-                 <div class="meta-row">
-                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
-                     <span>${item.autor || 'Anonim'}</span>
-                 </div>
-             `;
-        } else {
-            meta.innerHTML = `
-                 <div class="meta-row">
-                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
-                     <span>${item.termin_odpowiedzi || 'Brak terminu'}</span>
-                 </div>
-                  <div class="meta-row">
-                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
-                     <span>${item.autor || 'Anonim'}</span>
-                 </div>
-             `;
-        }
-        div.appendChild(meta);
-
-        // Quick Status Actions
-        const actions = document.createElement('div');
-        actions.className = 'card-actions';
-
-        if (item.status === 'Nowe') {
-            const btn = document.createElement('button');
-            btn.className = 'status-btn btn-orange'; // -> W toku
-            btn.innerHTML = '<span>→ W toku</span>';
-            btn.onclick = (e) => { e.stopPropagation(); changeStatus(type, item, 'W toku'); };
-            actions.appendChild(btn);
-        } else if (item.status === 'W toku') {
-            const btn = document.createElement('button');
-            btn.className = 'status-btn btn-green'; // -> Zrealizowane
-            btn.innerHTML = '<span>✓ Gotowe</span>';
-            btn.onclick = (e) => { e.stopPropagation(); changeStatus(type, item, 'Zrealizowane'); };
-            actions.appendChild(btn);
-        }
-
-        if (actions.children.length > 0) div.appendChild(actions);
-
-        return div;
-    }
-
-    function createListItem(type, item) {
-        const div = document.createElement('div');
-        div.className = 'list-item';
-
-        let statusColor = '#3B82F6';
-        if (item.status === 'W toku') statusColor = '#F59E0B';
-        if (item.status === 'Zrealizowane') statusColor = '#10B981';
-
-        div.innerHTML = `
-            <div class="list-item-content">
-                <div class="list-item-title">${type === 'req' ? item.co : item.opis}</div>
-                <div class="list-item-meta">${item.autor || 'Anonim'} • ${type === 'req' ? item.ilosc : (item.termin_odpowiedzi || '')}</div>
-            </div>
-            <div class="list-item-status" style="background-color: ${statusColor}20; color: ${statusColor}">
-                ${item.status}
-            </div>
-        `;
-        return div;
-    }
-
-    // --- Actions ---
-    async function changeStatus(type, item, newStatus) {
-        const oldStatus = item.status;
-        item.status = newStatus;
-
-        if (type === 'req') {
-            Storage.updateRequirement(item);
-            renderRequirements();
-        } else {
-            Storage.updateQuestion(item);
-            renderQuestions();
-        }
-
-        // API Call
+        // Sync with Backend
         if (navigator.onLine) {
             try {
-                if (type === 'req') {
-                    await API.updateRequirementStatus(item.id, newStatus);
+                let res;
+                if (type === 'order') res = await API.updateOrderStatus(id, newStatus);
+                else res = await API.updateItemStatus(id, newStatus);
+
+                if (res && res.ok) {
+                    showToast('Status zaktualizowany w chmurze.');
+                    // Optional silent sync to ensure consistency
+                    // setTimeout(() => syncCurrentView(true), 1000); 
                 } else {
-                    await API.updateQuestionStatus(item.id, newStatus);
+                    throw new Error('API Error');
                 }
-                showToast('Status zaktualizowany online', 'success');
             } catch (err) {
-                console.error("Status update error", err);
-                item.status = oldStatus; // Revert on fail? Or just keep local and retry later. 
-                // Currently keeping local change but notifying error.
-                // In real app, might want a queue.
-                showToast('Zapisano lokalnie (błąd sieci)', 'info');
+                console.error('[OAPP] Status Update Failed', err);
+                showToast('Błąd aktualizacji statusu online. Zmiana zapisana lokalnie.');
+                // In a real robust app, we'd queue this action. 
+                // Here we stick to optimistic UI + local failover.
             }
         } else {
-            showToast('Zapisano offline', 'info');
+            showToast('Offline. Status zmieniony lokalnie.');
+        }
+    }
+}
+
+// Expose updateStatus globally for inline onclick handlers
+window.updateStatus = updateStatus;
+window.toggleForm = toggleForm;
+
+// --- Documentation Rendering ---
+function renderLinks() {
+    const list = Elements.linksList;
+    list.innerHTML = '';
+    const links = Storage.getLinks();
+
+    links.forEach(link => {
+        const li = document.createElement('li');
+        li.innerHTML = `
+            <a href="${link.url}" target="_blank">${link.title}</a>
+            <button onclick="removeLink(${link.id})" style="border:none;background:none;color:#999;cursor:pointer;">✕</button>
+        `;
+        list.appendChild(li);
+    });
+}
+
+function addNewLink() {
+    const title = prompt('Nazwa linku:');
+    if (!title) return;
+    const url = prompt('URL linku:');
+    if (!url) return;
+
+    Storage.addLink(title, url);
+    renderLinks();
+}
+
+function removeLink(id) {
+    if (confirm('Usunąć link?')) {
+        Storage.removeLink(id);
+        renderLinks();
+    }
+}
+
+window.addNewLink = addNewLink;
+window.removeLink = removeLink;
+
+/* --- Chat AI & Settings Logic --- */
+function initSettings() {
+    // Load saved settings
+    Elements.chatLinkInput.value = Storage.getChatLink();
+    Elements.userNameInput.value = Storage.getUserName();
+}
+
+Elements.saveSettingsBtn.addEventListener('click', () => {
+    const rawLink = Elements.chatLinkInput.value.trim();
+    const userName = Elements.userNameInput.value.trim();
+    let success = true;
+
+    // Save Chat Link
+    if (rawLink) {
+        if (!rawLink.startsWith('http')) {
+            showToast('Link do Chat AI musi startować od http.');
+            success = false;
+        } else {
+            Storage.saveChatLink(rawLink);
         }
     }
 
-    function shortenText(text, max) {
-        if (!text) return '';
-        return text.length > max ? text.substring(0, max) + '...' : text;
+    // Save User Name
+    if (userName) {
+        Storage.saveUserName(userName);
+    } else {
+        // Allow empty? Or clear it? Let's allow clearing.
+        Storage.saveUserName('');
     }
 
-    function setupSettings() {
-        const settings = Storage.getSettings();
-        const authorInput = document.getElementById('settings-author');
-        if (authorInput) {
-            authorInput.value = settings.author;
-            authorInput.addEventListener('change', () => {
-                const newSettings = { author: authorInput.value };
-                Storage.saveSettings(newSettings);
-                showToast('Zapisano ustawienia', 'success');
-            });
+    if (success) showToast('Ustawienia zapisane.');
+});
+
+Elements.testConnectionBtn.addEventListener('click', async () => {
+    showToast('Testowanie połączenia...');
+    try {
+        // We test by fetching items list (lightweight)
+        const res = await API.fetchItems();
+        if (res && res.ok) {
+            showToast('✅ Połączenie OK!');
+        } else {
+            showToast('⚠️ Połączenie: Otrzymano błąd.');
         }
-
-        const clearBtn = document.getElementById('clear-data-btn');
-        if (clearBtn) {
-            clearBtn.addEventListener('click', () => {
-                if (confirm('Czy na pewno wyczyścić dane?')) {
-                    Storage.clearAll();
-                    location.reload();
-                }
-            });
-        }
-    }
-
-    function showToast(msg, type = 'info') {
-        let container = document.getElementById('toast-container');
-        if (!container) {
-            container = document.createElement('div');
-            container.id = 'toast-container';
-            document.body.appendChild(container);
-        }
-
-        const toast = document.createElement('div');
-        toast.className = 'toast show';
-        if (type === 'error') toast.style.backgroundColor = '#DC2626';
-        if (type === 'success') toast.style.backgroundColor = '#059669';
-
-        toast.textContent = msg;
-        container.appendChild(toast);
-
-        setTimeout(() => {
-            toast.classList.remove('show');
-            setTimeout(() => toast.remove(), 300);
-        }, 3000);
+    } catch (err) {
+        console.error(err);
+        showToast('❌ Błąd połączenia.');
     }
 });
+
+Elements.openChatBtn.addEventListener('click', () => {
+    const link = Storage.getChatLink();
+    if (link) {
+        window.open(link, '_blank');
+    } else {
+        showToast('Skonfiguruj link w ustawieniach.');
+    }
+});
+
+
+/* --- Synchronization --- */
+
+async function syncOrders(silent = false) {
+    if (!navigator.onLine) {
+        if (!silent) showToast('Brak sieci. Pokazuję dane lokalne.');
+        return;
+    }
+
+    if (!silent) showToast('Odświeżanie zapotrzebowań...');
+    try {
+        const res = await API.fetchOrders();
+        console.log('[OAPP] Sync Orders:', res);
+
+        if (res && res.ok && Array.isArray(res.items)) {
+            // Filter out empty items
+            const cleanItems = res.items.filter(i => i.co && i.co.trim().length > 0);
+
+            Storage.saveOrders(cleanItems);
+            Storage.setLastSyncOrders(Date.now());
+            renderKanban(Elements.ordersBoard, cleanItems, 'order');
+            if (!silent) showToast('Zapotrzebowania zaktualizowane.');
+        } else {
+            console.warn('[OAPP] Invalid format for orders', res);
+            if (!silent) showToast('Błąd formatu danych.');
+        }
+    } catch (err) {
+        console.error('[OAPP] Sync Orders Error', err);
+        if (!silent) showToast('Błąd synchronizacji.');
+    }
+}
+
+async function syncItems(silent = false) {
+    if (!navigator.onLine) {
+        if (!silent) showToast('Brak sieci. Pokazuję dane lokalne.');
+        return;
+    }
+
+    if (!silent) showToast('Odświeżanie pytań...');
+    try {
+        const res = await API.fetchItems();
+        console.log('[OAPP] Sync Items:', res);
+
+        if (res && res.ok && Array.isArray(res.items)) {
+            // Filter out empty items
+            const cleanItems = res.items.filter(i => i.opis && i.opis.trim().length > 0);
+
+            Storage.saveItems(cleanItems);
+            Storage.setLastSyncItems(Date.now());
+            renderKanban(Elements.itemsBoard, cleanItems, 'item');
+            if (!silent) showToast('Pytania zaktualizowane.');
+        } else {
+            console.warn('[OAPP] Invalid format for items', res);
+            if (!silent) showToast('Błąd formatu danych.');
+        }
+    } catch (err) {
+        console.error('[OAPP] Sync Items Error', err);
+        if (!silent) showToast('Błąd synchronizacji.');
+    }
+}
+
+function syncCurrentView(silent = false) {
+    if (AppState.currentView === 'view-orders') {
+        syncOrders(silent);
+    } else if (AppState.currentView === 'view-items') {
+        syncItems(silent);
+    }
+}
+
+function checkAutoSync() {
+    const now = Date.now();
+    const lastSyncOrders = Storage.getLastSyncOrders();
+    const lastSyncItems = Storage.getLastSyncItems();
+
+    if (now - lastSyncOrders > AppState.syncInterval) {
+        syncOrders(true);
+    }
+    if (now - lastSyncItems > AppState.syncInterval) {
+        syncItems(true);
+    }
+}
+
+/* --- Event Listeners --- */
+
+// Navigation
+Elements.navButtons.forEach(btn => {
+    btn.addEventListener('click', () => {
+        // Switch Active Class
+        Elements.navButtons.forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+
+        // Switch View
+        Elements.views.forEach(v => v.classList.remove('active'));
+        const targetId = btn.dataset.target;
+        document.getElementById(targetId).classList.add('active');
+
+        AppState.currentView = targetId;
+
+        // Trigger Sync if switching to data view
+        if (targetId === 'view-orders') {
+            const orders = Storage.getOrders();
+            renderKanban(Elements.ordersBoard, orders, 'order');
+            // Background sync logic if stale? Or just manual?
+            // User requested: "Po wejściu w zakładkę: wykonaj sync tylko tej zakładki."
+            // We'll do it if network available
+            if (navigator.onLine) syncOrders(true);
+
+        } else if (targetId === 'view-items') {
+            const items = Storage.getItems();
+            renderKanban(Elements.itemsBoard, items, 'item');
+            if (navigator.onLine) syncItems(true);
+
+        } else if (targetId === 'view-docs') {
+            renderLinks();
+        } else if (targetId === 'view-chat') {
+            initSettings();
+        }
+    });
+});
+
+// Refresh Buttons (Manual Sync)
+document.getElementById('refresh-orders').addEventListener('click', () => {
+    console.log('[OAPP] Manual Refresh: Orders');
+    syncOrders(false);
+});
+
+document.getElementById('refresh-items').addEventListener('click', () => {
+    console.log('[OAPP] Manual Refresh: Items');
+    syncItems(false);
+});
+
+// Form Submissions
+Elements.ordersForm.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const formData = new FormData(e.target);
+    const data = Object.fromEntries(formData.entries());
+
+    if (!data.co.trim()) return;
+
+    // Create temp local object
+    const newItem = {
+        id: `local-${Date.now()}`,
+        ...data,
+        status: 'Nowe'
+    };
+
+    // Optimistically add to local storage
+    const orders = Storage.getOrders();
+    orders.unshift(newItem); // Add to top
+    Storage.saveOrders(orders);
+    renderKanban(Elements.ordersBoard, orders, 'order');
+
+    e.target.reset();
+    toggleForm('orders-form-container');
+
+    if (navigator.onLine) {
+        showToast('Wysyłanie...');
+        try {
+            await API.addOrder(data);
+            showToast('Dodano pomyślnie.');
+            syncOrders(true); // Refresh with server ID
+        } catch (err) {
+            console.error('[OAPP] Add Order Failed', err);
+            showToast('Błąd wysyłania. Zapisano lokalnie.');
+        }
+    } else {
+        showToast('Offline. Zapisano lokalnie.');
+    }
+});
+
+Elements.itemsForm.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const formData = new FormData(e.target);
+    const data = Object.fromEntries(formData.entries());
+
+    if (!data.opis.trim()) return;
+
+    const newItem = {
+        id: `local-${Date.now()}`,
+        ...data,
+        status: 'Nowe'
+    };
+
+    const items = Storage.getItems();
+    items.unshift(newItem);
+    Storage.saveItems(items);
+    renderKanban(Elements.itemsBoard, items, 'item');
+
+    e.target.reset();
+    toggleForm('items-form-container');
+
+    if (navigator.onLine) {
+        showToast('Wysyłanie...');
+        try {
+            await API.addItem(data);
+            showToast('Dodano pomyślnie.');
+            syncItems(true);
+        } catch (err) {
+            console.error('[OAPP] Add Item Failed', err);
+            showToast('Błąd wysyłania. Zapisano lokalnie.');
+        }
+    } else {
+        showToast('Offline. Zapisano lokalnie.');
+    }
+});
+
+
+// Connectivity
+window.addEventListener('online', updateConnectionStatus);
+window.addEventListener('offline', updateConnectionStatus);
+
+/* --- Initialization --- */
+function init() {
+    console.log('[OAPP] Initializing...');
+
+    // Load initial data from Storage
+    const orders = Storage.getOrders();
+    renderKanban(Elements.ordersBoard, orders, 'order');
+
+    const items = Storage.getItems();
+    renderKanban(Elements.itemsBoard, items, 'item');
+
+    renderLinks();
+
+    // Check for stale data / Auto-sync
+    checkAutoSync();
+
+    // Initial Sync if online
+    if (navigator.onLine) {
+        syncOrders(true);
+        syncItems(true);
+    }
+}
+
+// Run init when DOM ready
+document.addEventListener('DOMContentLoaded', init);

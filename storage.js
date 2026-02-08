@@ -1,98 +1,118 @@
+/**
+ * OAPP v3 - Storage Module
+ * Handles specific localStorage operations and data persistence.
+ */
+
+const STORAGE_KEYS = {
+    ORDERS: 'oapp_orders_data',
+    ITEMS: 'oapp_items_data',
+    LINKS: 'oapp_links_data',
+    LAST_SYNC_ORDERS: 'oapp_last_sync_orders',
+    LAST_SYNC_ITEMS: 'oapp_last_sync_items',
+    CHAT_LINK: 'oapp_chat_link', // New key
+    THEME: 'oapp_theme_settings' // Reserved for future use
+};
+
 const Storage = {
-    KEYS: {
-        REQ: 'oapp_requirements',
-        QUESTIONS: 'oapp_questions',
-        SETTINGS: 'oapp_settings'
-    },
-
-    getRequirements() {
-        const data = localStorage.getItem(this.KEYS.REQ);
-        return data ? JSON.parse(data) : [];
-    },
-
-    saveRequirements(items) {
-        localStorage.setItem(this.KEYS.REQ, JSON.stringify(items));
-    },
-
-    addRequirement(item) {
-        const items = this.getRequirements();
-        items.push(item);
-        this.saveRequirements(items);
-    },
-
-    updateRequirement(updatedItem) {
-        const items = this.getRequirements();
-        const index = items.findIndex(i => i.id === updatedItem.id);
-        if (index !== -1) {
-            items[index] = updatedItem;
-            this.saveRequirements(items);
+    // --- Generic Getters/Setters ---
+    get(key, defaultValue = null) {
+        try {
+            const item = localStorage.getItem(key);
+            return item ? JSON.parse(item) : defaultValue;
+        } catch (e) {
+            console.error('[OAPP] Storage Read Error:', e);
+            return defaultValue;
         }
     },
 
-    syncRequirements(serverItems) {
-        // Filter empty records
-        let validServerItems = serverItems.filter(item => item.co && item.co.trim() !== '');
-
-        const localItems = this.getRequirements();
-        // Keep local items that are unsynced (id starts with 'local-')
-        const unsyncedItems = localItems.filter(item => String(item.id).startsWith('local-'));
-
-        // Merge: Server items + Unsynced local items
-        // Note: Server is truth for anything synced. older local cache of synced items is discarded.
-        const merged = [...validServerItems, ...unsyncedItems];
-        this.saveRequirements(merged);
-    },
-
-    getQuestions() {
-        const data = localStorage.getItem(this.KEYS.QUESTIONS);
-        return data ? JSON.parse(data) : [];
-    },
-
-    saveQuestions(items) {
-        localStorage.setItem(this.KEYS.QUESTIONS, JSON.stringify(items));
-    },
-
-    addQuestion(item) {
-        const items = this.getQuestions();
-        items.push(item);
-        this.saveQuestions(items);
-    },
-
-    updateQuestion(updatedItem) {
-        const items = this.getQuestions();
-        const index = items.findIndex(i => i.id === updatedItem.id);
-        if (index !== -1) {
-            items[index] = updatedItem;
-            this.saveQuestions(items);
+    set(key, value) {
+        try {
+            localStorage.setItem(key, JSON.stringify(value));
+            return true;
+        } catch (e) {
+            console.error('[OAPP] Storage Write Error:', e);
+            return false;
         }
     },
 
-    syncQuestions(serverItems) {
-        // Filter empty records
-        let validServerItems = serverItems.filter(item => item.opis && item.opis.trim() !== '');
+    // --- Specific Data Handlers ---
 
-        const localItems = this.getQuestions();
-        const unsyncedItems = localItems.filter(item => String(item.id).startsWith('local-'));
-
-        const merged = [...validServerItems, ...unsyncedItems];
-        this.saveQuestions(merged);
+    // Zapotrzebowania (Orders)
+    getOrders() {
+        return this.get(STORAGE_KEYS.ORDERS, []);
     },
 
-    getSettings() {
-        const data = localStorage.getItem(this.KEYS.SETTINGS);
-        return data ? JSON.parse(data) : { author: 'Kuba' };
+    saveOrders(orders) {
+        return this.set(STORAGE_KEYS.ORDERS, orders);
     },
 
-    saveSettings(settings) {
-        localStorage.setItem(this.KEYS.SETTINGS, JSON.stringify(settings));
+    getLastSyncOrders() {
+        return this.get(STORAGE_KEYS.LAST_SYNC_ORDERS, 0);
     },
 
+    setLastSyncOrders(timestamp) {
+        return this.set(STORAGE_KEYS.LAST_SYNC_ORDERS, timestamp);
+    },
+
+    // Pytania (Items/Questions)
+    getItems() {
+        return this.get(STORAGE_KEYS.ITEMS, []);
+    },
+
+    saveItems(items) {
+        return this.set(STORAGE_KEYS.ITEMS, items);
+    },
+
+    getLastSyncItems() {
+        return this.get(STORAGE_KEYS.LAST_SYNC_ITEMS, 0);
+    },
+
+    setLastSyncItems(timestamp) {
+        return this.set(STORAGE_KEYS.LAST_SYNC_ITEMS, timestamp);
+    },
+
+    // Dokumentacja Links
+    getLinks() {
+        return this.get(STORAGE_KEYS.LINKS, []);
+    },
+
+    saveLinks(links) {
+        return this.set(STORAGE_KEYS.LINKS, links);
+    },
+
+    addLink(title, url) {
+        const links = this.getLinks();
+        links.push({ id: Date.now(), title, url });
+        this.saveLinks(links);
+    },
+
+    removeLink(id) {
+        const links = this.getLinks();
+        const newLinks = links.filter(link => link.id !== id);
+        this.saveLinks(newLinks);
+    },
+
+    // --- Chat AI Settings ---
+    getChatLink() {
+        return this.get(STORAGE_KEYS.CHAT_LINK, 'https://notebooklm.google.com/notebook/3ce3ce8d-6a34-4298-821f-4c87d07ba3d0');
+    },
+
+    saveChatLink(link) {
+        return this.set(STORAGE_KEYS.CHAT_LINK, link);
+    },
+
+    // --- User Settings ---
+    getUserName() {
+        return this.get(STORAGE_KEYS.USER_NAME, '');
+    },
+
+    saveUserName(name) {
+        return this.set(STORAGE_KEYS.USER_NAME, name);
+    },
+
+    // --- Utility ---
+    // Clears all OAPP related data (useful for hard reset)
     clearAll() {
-        localStorage.removeItem(this.KEYS.REQ);
-        localStorage.removeItem(this.KEYS.QUESTIONS);
-        // keep settings? user asked to clear local data, usually implies content
-        // specs say "Wyczyść dane lokalne (czyści tylko localStorage)"
-        // safest to clear everything then restore default settings or let them be recreated
-        localStorage.clear();
+        Object.values(STORAGE_KEYS).forEach(key => localStorage.removeItem(key));
     }
 };
